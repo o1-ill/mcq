@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة أسئلة OMSCS - ديفدسون</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-full">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-2">📚 منصة أسئلة OMSCS</h1>
+            <p class="text-gray-600">مجموعة ديفدسون - للدراسة والتحضير</p>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="mainMenu" class="fade-in">
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">اختر النظام للدراسة</h2>
+                
+                <!-- Add New System -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-3">إضافة نظام جديد</h3>
+                    <div class="flex gap-3 mb-3">
+                        <input type="text" id="systemName" placeholder="اسم النظام" class="flex-1 px-3 py-2 border rounded-lg">
+                        <button onclick="addSystem()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">إضافة</button>
+                    </div>
+                    
+                    <!-- PDF Upload Option -->
+                    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <label class="block text-sm font-medium text-blue-800 mb-2">📄 رفع ملف PDF (ديفدسون)</label>
+                        <input type="file" id="pdfFile" accept=".pdf" class="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white" onchange="handlePDFUpload()">
+                        <p class="text-xs text-blue-600 mt-1">سيتم استخراج الأسئلة والإجابات تلقائياً من الملف</p>
+                    </div>
+                    
+                    <!-- Manual Input Option -->
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">أو أدخل الأسئلة يدوياً:</label>
+                        <textarea id="questionsData" placeholder="الصق هنا أسئلة النظام بصيغة JSON أو النص..." class="w-full h-32 px-3 py-2 border rounded-lg resize-none"></textarea>
+                    </div>
+                    
+                    <!-- Processing Status -->
+                    <div id="processingStatus" class="hidden mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 ml-2"></div>
+                            <span class="text-yellow-800">جاري معالجة الملف...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Systems List -->
+                <div id="systemsList" class="grid gap-4 md:grid-cols-2">
+                    <!-- Systems will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 الإحصائيات العامة</h3>
+                <div id="overallStats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Stats will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Interface -->
+        <div id="quizInterface" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <!-- Quiz Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="backToMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">← العودة</button>
+                    <div class="text-center">
+                        <h2 id="quizTitle" class="text-xl font-bold text-gray-800"></h2>
+                        <p id="questionCounter" class="text-gray-600"></p>
+                    </div>
+                    <div class="text-right">
+                        <div id="timer" class="text-lg font-mono text-indigo-600"></div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-gray-200 rounded-full h-2 mb-6">
+                    <div id="progressBar" class="progress-bar bg-indigo-600 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+
+                <!-- Question -->
+                <div id="questionContainer" class="mb-6">
+                    <!-- Question content will be loaded here -->
+                </div>
+
+                <!-- Navigation -->
+                <div class="flex justify-between">
+                    <button id="prevBtn" onclick="previousQuestion()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg disabled:opacity-50" disabled>السابق</button>
+                    <button id="nextBtn" onclick="nextQuestion()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg">التالي</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsInterface" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-4">🎉 انتهى الاختبار!</h2>
+                    <div id="finalScore" class="text-6xl font-bold text-indigo-600 mb-4"></div>
+                    <div id="scoreDetails" class="text-gray-600 mb-6"></div>
+                </div>
+
+                <div id="detailedResults" class="mb-8">
+                    <!-- Detailed results will be shown here -->
+                </div>
+
+                <div class="flex gap-4 justify-center">
+                    <button onclick="retakeQuiz()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg">إعادة الاختبار</button>
+                    <button onclick="backToMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg">العودة للقائمة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentSystem = null;
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let userAnswers = [];
+        let startTime = null;
+        let timerInterval = null;
+
+        // Sample data structure - empty by default
+        const sampleSystems = {};
+
+        // Initialize the application
+        function init() {
+            loadSystems();
+            loadOverallStats();
+            // Configure PDF.js
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+        }
+
+        // Handle PDF file upload
+        async function handlePDFUpload() {
+            const fileInput = document.getElementById('pdfFile');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            if (file.type !== 'application/pdf') {
+                showMessage('يرجى اختيار ملف PDF صحيح', 'error');
+                return;
+            }
+
+            showProcessingStatus(true);
+            
+            try {
+                const questions = await extractQuestionsFromPDF(file);
+                if (questions.length > 0) {
+                    document.getElementById('questionsData').value = JSON.stringify(questions, null, 2);
+                    
+                    // Auto-fill system name if not provided
+                    const systemNameInput = document.getElementById('systemName');
+                    if (!systemNameInput.value.trim()) {
+                        systemNameInput.value = file.name.replace('.pdf', '');
+                    }
+                    
+                    showMessage(`تم استخراج ${questions.length} سؤال بنجاح!`, 'success');
+                } else {
+                    showMessage('لم يتم العثور على أسئلة في الملف. تأكد من صيغة الملف.', 'warning');
+                }
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                showMessage('حدث خطأ في معالجة الملف. يرجى المحاولة مرة أخرى.', 'error');
+            } finally {
+                showProcessingStatus(false);
+            }
+        }
+
+        // Extract questions from PDF
+        async function extractQuestionsFromPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let fullText = '';
+
+            // Extract text from all pages
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+
+            return parseQuestionsFromText(fullText);
+        }
+
+        // Parse questions from extracted text
+        function parseQuestionsFromText(text) {
+            const questions = [];
+            
+            // Multiple parsing patterns for different formats
+            const patterns = [
+                // Pattern 1: Question followed by A) B) C) D) and Answer: X
+                /(\d+[\.\)]?\s*[^\n]+(?:\n[^\n]*)*?)\s*(?:A[\)\.]?\s*([^\n]+))\s*(?:B[\)\.]?\s*([^\n]+))\s*(?:C[\)\.]?\s*([^\n]+))\s*(?:D[\)\.]?\s*([^\n]+))\s*(?:Answer\s*:?\s*([ABCD]))/gi,
+                
+                // Pattern 2: Question with numbered options and correct answer
+                /(\d+[\.\)]?\s*[^\n]+(?:\n[^\n]*)*?)\s*(?:1[\)\.]?\s*([^\n]+))\s*(?:2[\)\.]?\s*([^\n]+))\s*(?:3[\)\.]?\s*([^\n]+))\s*(?:4[\)\.]?\s*([^\n]+))\s*(?:(?:الإجابة|Answer|Correct)\s*:?\s*(\d))/gi,
+                
+                // Pattern 3: Arabic format
+                /([^\n]+\؟[^\n]*)\s*(?:أ[\)\.]?\s*([^\n]+))\s*(?:ب[\)\.]?\s*([^\n]+))\s*(?:ج[\)\.]?\s*([^\n]+))\s*(?:د[\)\.]?\s*([^\n]+))\s*(?:(?:الإجابة|الجواب)\s*:?\s*([أبجد]))/gi
+            ];
+
+            patterns.forEach(pattern => {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    const questionText = match[1].trim();
+                    const options = [
+                        match[2]?.trim(),
+                        match[3]?.trim(),
+                        match[4]?.trim(),
+                        match[5]?.trim()
+                    ].filter(opt => opt && opt.length > 0);
+
+                    if (options.length === 4) {
+                        let correctIndex = 0;
+                        const answerChar = match[6]?.trim().toUpperCase();
+                        
+                        if (answerChar === 'A' || answerChar === 'أ' || answerChar === '1') correctIndex = 0;
+                        else if (answerChar === 'B' || answerChar === 'ب' || answerChar === '2') correctIndex = 1;
+                        else if (answerChar === 'C' || answerChar === 'ج' || answerChar === '3') correctIndex = 2;
+                        else if (answerChar === 'D' || answerChar === 'د' || answerChar === '4') correctIndex = 3;
+
+                        questions.push({
+                            question: questionText,
+                            options: options,
+                            correct: correctIndex,
+                            explanation: "مستخرج من ملف ديفدسون"
+                        });
+                    }
+                }
+            });
+
+            // Remove duplicates based on question text
+            const uniqueQuestions = questions.filter((question, index, self) => 
+                index === self.findIndex(q => q.question === question.question)
+            );
+
+            return uniqueQuestions;
+        }
+
+        // Show processing status
+        function showProcessingStatus(show) {
+            const statusDiv = document.getElementById('processingStatus');
+            if (show) {
+                statusDiv.classList.remove('hidden');
+            } else {
+                statusDiv.classList.add('hidden');
+            }
+        }
+
+        // Show message to user
+        function showMessage(message, type = 'info') {
+            // Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md fade-in`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            messageDiv.className += ` ${colors[type] || colors.info}`;
+            messageDiv.textContent = message;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Load systems from localStorage
+        function loadSystems() {
+            const systems = JSON.parse(localStorage.getItem('omscsSystems') || JSON.stringify(sampleSystems));
+            const systemsList = document.getElementById('systemsList');
+            systemsList.innerHTML = '';
+
+            if (Object.keys(systems).length === 0) {
+                systemsList.innerHTML = `
+                    <div class="col-span-full text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <div class="text-6xl mb-4">📚</div>
+                        <h3 class="text-xl font-bold text-gray-700 mb-2">مرحباً بك في منصة أسئلة OMSCS!</h3>
+                        <p class="text-gray-600 mb-4">ابدأ بإضافة نظام جديد عن طريق رفع ملف PDF أو إدخال الأسئلة يدوياً</p>
+                        <div class="text-sm text-gray-500">
+                            <p>💡 نصيحة: ارفع ملف PDF من مجموعة ديفدسون وسيتم استخراج الأسئلة تلقائياً</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                Object.keys(systems).forEach(systemName => {
+                    const systemCard = document.createElement('div');
+                    systemCard.className = 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-lg cursor-pointer hover:shadow-lg transition-all transform hover:scale-105';
+                    systemCard.innerHTML = `
+                        <h3 class="text-xl font-bold mb-2">${systemName}</h3>
+                        <p class="text-indigo-100 mb-4">${systems[systemName].length} سؤال</p>
+                        <div class="flex justify-between items-center">
+                            <button onclick="startQuiz('${systemName}')" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100">ابدأ الاختبار</button>
+                            <button onclick="deleteSystem('${systemName}')" class="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-lg">🗑️</button>
+                        </div>
+                    `;
+                    systemsList.appendChild(systemCard);
+                });
+            }
+        }
+
+        // Add new system
+        function addSystem() {
+            const systemName = document.getElementById('systemName').value.trim();
+            const questionsData = document.getElementById('questionsData').value.trim();
+
+            if (!systemName || !questionsData) {
+                showMessage('يرجى إدخال اسم النظام والأسئلة', 'warning');
+                return;
+            }
+
+            try {
+                let questions;
+                if (questionsData.startsWith('[') || questionsData.startsWith('{')) {
+                    questions = JSON.parse(questionsData);
+                } else {
+                    // Parse simple text format
+                    questions = parseTextQuestions(questionsData);
+                }
+
+                // Validate questions format
+                if (!Array.isArray(questions) || questions.length === 0) {
+                    showMessage('لم يتم العثور على أسئلة صحيحة', 'error');
+                    return;
+                }
+
+                // Validate each question
+                const validQuestions = questions.filter(q => 
+                    q.question && 
+                    Array.isArray(q.options) && 
+                    q.options.length >= 2 && 
+                    typeof q.correct === 'number' && 
+                    q.correct >= 0 && 
+                    q.correct < q.options.length
+                );
+
+                if (validQuestions.length === 0) {
+                    showMessage('لا توجد أسئلة صحيحة في البيانات المدخلة', 'error');
+                    return;
+                }
+
+                const systems = JSON.parse(localStorage.getItem('omscsSystems') || '{}');
+                systems[systemName] = validQuestions;
+                localStorage.setItem('omscsSystems', JSON.stringify(systems));
+
+                // Clear inputs
+                document.getElementById('systemName').value = '';
+                document.getElementById('questionsData').value = '';
+                document.getElementById('pdfFile').value = '';
+                
+                loadSystems();
+                
+                showMessage(`تم إضافة نظام "${systemName}" بنجاح! (${validQuestions.length} سؤال)`, 'success');
+                
+                if (validQuestions.length < questions.length) {
+                    showMessage(`تم تجاهل ${questions.length - validQuestions.length} سؤال غير صحيح`, 'warning');
+                }
+            } catch (error) {
+                console.error('Error adding system:', error);
+                showMessage('خطأ في تحليل البيانات. يرجى التحقق من الصيغة.', 'error');
+            }
+        }
+
+        // Parse simple text questions
+        function parseTextQuestions(text) {
+            const questions = [];
+            const blocks = text.split('\n\n').filter(block => block.trim());
+
+            blocks.forEach(block => {
+                const lines = block.split('\n').filter(line => line.trim());
+                if (lines.length >= 6) {
+                    const question = lines[0];
+                    const options = lines.slice(1, 5);
+                    const correctIndex = parseInt(lines[5]) - 1;
+                    const explanation = lines[6] || 'لا يوجد توضيح';
+
+                    questions.push({
+                        question,
+                        options,
+                        correct: correctIndex,
+                        explanation
+                    });
+                }
+            });
+
+            return questions;
+        }
+
+        // Delete system
+        function deleteSystem(systemName) {
+            if (confirm(`هل أنت متأكد من حذف نظام "${systemName}"؟`)) {
+                const systems = JSON.parse(localStorage.getItem('omscsSystems') || '{}');
+                delete systems[systemName];
+                localStorage.setItem('omscsSystems', JSON.stringify(systems));
+                loadSystems();
+            }
+        }
+
+        // Start quiz
+        function startQuiz(systemName) {
+            const systems = JSON.parse(localStorage.getItem('omscsSystems') || '{}');
+            currentSystem = systemName;
+            currentQuestions = [...systems[systemName]];
+            currentQuestionIndex = 0;
+            userAnswers = new Array(currentQuestions.length).fill(null);
+            startTime = Date.now();
+
+            // Shuffle questions
+            currentQuestions.sort(() => Math.random() - 0.5);
+
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('quizInterface').classList.remove('hidden');
+            document.getElementById('quizTitle').textContent = systemName;
+
+            startTimer();
+            showQuestion();
+        }
+
+        // Show current question
+        function showQuestion() {
+            const question = currentQuestions[currentQuestionIndex];
+            const container = document.getElementById('questionContainer');
+            
+            container.innerHTML = `
+                <div class="fade-in">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">${question.question}</h3>
+                    <div class="space-y-3">
+                        ${question.options.map((option, index) => `
+                            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${userAnswers[currentQuestionIndex] === index ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}">
+                                <input type="radio" name="answer" value="${index}" class="mr-3" ${userAnswers[currentQuestionIndex] === index ? 'checked' : ''} onchange="selectAnswer(${index})">
+                                <span class="text-gray-700">${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            updateProgress();
+            updateNavigation();
+        }
+
+        // Select answer
+        function selectAnswer(answerIndex) {
+            userAnswers[currentQuestionIndex] = answerIndex;
+        }
+
+        // Update progress
+        function updateProgress() {
+            const progress = ((currentQuestionIndex + 1) / currentQuestions.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('questionCounter').textContent = `السؤال ${currentQuestionIndex + 1} من ${currentQuestions.length}`;
+        }
+
+        // Update navigation buttons
+        function updateNavigation() {
+            document.getElementById('prevBtn').disabled = currentQuestionIndex === 0;
+            const nextBtn = document.getElementById('nextBtn');
+            
+            if (currentQuestionIndex === currentQuestions.length - 1) {
+                nextBtn.textContent = 'إنهاء الاختبار';
+                nextBtn.onclick = finishQuiz;
+            } else {
+                nextBtn.textContent = 'التالي';
+                nextBtn.onclick = nextQuestion;
+            }
+        }
+
+        // Navigation functions
+        function nextQuestion() {
+            if (currentQuestionIndex < currentQuestions.length - 1) {
+                currentQuestionIndex++;
+                showQuestion();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion();
+            }
+        }
+
+        // Timer functions
+        function startTimer() {
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        // Finish quiz
+        function finishQuiz() {
+            stopTimer();
+            const results = calculateResults();
+            saveResults(results);
+            showResults(results);
+        }
+
+        // Calculate results
+        function calculateResults() {
+            let correct = 0;
+            const details = [];
+
+            currentQuestions.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                const isCorrect = userAnswer === question.correct;
+                if (isCorrect) correct++;
+
+                details.push({
+                    question: question.question,
+                    userAnswer: userAnswer !== null ? question.options[userAnswer] : 'لم يتم الإجابة',
+                    correctAnswer: question.options[question.correct],
+                    isCorrect,
+                    explanation: question.explanation
+                });
+            });
+
+            const totalTime = Math.floor((Date.now() - startTime) / 1000);
+            const percentage = Math.round((correct / currentQuestions.length) * 100);
+
+            return {
+                system: currentSystem,
+                correct,
+                total: currentQuestions.length,
+                percentage,
+                time: totalTime,
+                details,
+                date: new Date().toLocaleDateString('ar-SA')
+            };
+        }
+
+        // Save results
+        function saveResults(results) {
+            const allResults = JSON.parse(localStorage.getItem('omscsResults') || '[]');
+            allResults.push(results);
+            localStorage.setItem('omscsResults', JSON.stringify(allResults));
+        }
+
+        // Show results
+        function showResults(results) {
+            document.getElementById('quizInterface').classList.add('hidden');
+            document.getElementById('resultsInterface').classList.remove('hidden');
+
+            document.getElementById('finalScore').textContent = `${results.percentage}%`;
+            document.getElementById('scoreDetails').innerHTML = `
+                <p>أجبت بشكل صحيح على ${results.correct} من ${results.total} أسئلة</p>
+                <p>الوقت المستغرق: ${Math.floor(results.time / 60)}:${(results.time % 60).toString().padStart(2, '0')}</p>
+            `;
+
+            const detailedResults = document.getElementById('detailedResults');
+            detailedResults.innerHTML = `
+                <h3 class="text-xl font-bold mb-4">تفاصيل الإجابات</h3>
+                <div class="space-y-4 max-h-96 overflow-y-auto">
+                    ${results.details.map((detail, index) => `
+                        <div class="p-4 border rounded-lg ${detail.isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">
+                            <div class="flex items-center mb-2">
+                                <span class="text-2xl ml-2">${detail.isCorrect ? '✅' : '❌'}</span>
+                                <span class="font-semibold">السؤال ${index + 1}</span>
+                            </div>
+                            <p class="font-medium mb-2">${detail.question}</p>
+                            <p class="text-sm text-gray-600 mb-1">إجابتك: ${detail.userAnswer}</p>
+                            <p class="text-sm text-green-600 mb-2">الإجابة الصحيحة: ${detail.correctAnswer}</p>
+                            <p class="text-sm text-gray-700 bg-gray-100 p-2 rounded">${detail.explanation}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Load overall statistics
+        function loadOverallStats() {
+            const results = JSON.parse(localStorage.getItem('omscsResults') || '[]');
+            const statsContainer = document.getElementById('overallStats');
+
+            if (results.length === 0) {
+                statsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">ابدأ بإضافة نظام جديد ورفع ملف PDF لتظهر الإحصائيات هنا</p>';
+                return;
+            }
+
+            const totalTests = results.length;
+            const averageScore = Math.round(results.reduce((sum, result) => sum + result.percentage, 0) / totalTests);
+            const bestScore = Math.max(...results.map(r => r.percentage));
+            const totalQuestions = results.reduce((sum, result) => sum + result.total, 0);
+
+            statsContainer.innerHTML = `
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-600">${totalTests}</div>
+                    <div class="text-sm text-gray-600">اختبار مكتمل</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <div class="text-2xl font-bold text-green-600">${averageScore}%</div>
+                    <div class="text-sm text-gray-600">المتوسط العام</div>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-600">${bestScore}%</div>
+                    <div class="text-sm text-gray-600">أفضل نتيجة</div>
+                </div>
+                <div class="text-center p-4 bg-orange-50 rounded-lg">
+                    <div class="text-2xl font-bold text-orange-600">${totalQuestions}</div>
+                    <div class="text-sm text-gray-600">إجمالي الأسئلة</div>
+                </div>
+            `;
+        }
+
+        // Utility functions
+        function retakeQuiz() {
+            startQuiz(currentSystem);
+        }
+
+        function backToMenu() {
+            stopTimer();
+            document.getElementById('quizInterface').classList.add('hidden');
+            document.getElementById('resultsInterface').classList.add('hidden');
+            document.getElementById('mainMenu').classList.remove('hidden');
+            loadOverallStats();
+        }
+
+        // Initialize the app when page loads
+        window.onload = init;
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98f04222511c6055',t:'MTc2MDU0MTE4NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
